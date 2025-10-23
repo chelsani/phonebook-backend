@@ -1,10 +1,10 @@
 const express = require('express');
-const app = express();
+const path = require('path');
 
-// parse JSON body for POST
+const app = express();
 app.use(express.json());
 
-// ----- Hardcoded data (for 3.1) -----
+// API routes
 let persons = [
   { id: "1", name: "Arto Hellas", number: "040-123456" },
   { id: "2", name: "Ada Lovelace", number: "39-44-5323523" },
@@ -12,75 +12,50 @@ let persons = [
   { id: "4", name: "Mary Poppendieck", number: "39-23-6423122" },
 ];
 
-/**
- * 3.1: GET all persons
- * Response: JSON array
- */
-app.get('/api/persons', (req, res) => {
-  res.json(persons);
-});
+app.get('/api/persons', (req, res) => res.json(persons));
 
-/**
- * 3.2: GET /info
- * Response: HTML with count + date
- */
 app.get('/info', (req, res) => {
   const count = persons.length;
   const time = new Date();
   res.send(`
-    <p>Phonebook has information for ${count} people</p>
+    <p>Phonebook has info for ${count} people</p>
     <p>${time}</p>
   `);
 });
 
-/**
- * 3.3: GET person by id
- * - If not found: 404
- */
 app.get('/api/persons/:id', (req, res) => {
   const person = persons.find(p => p.id === req.params.id);
   if (!person) return res.status(404).end();
   res.json(person);
 });
 
-/**
- * 3.4: DELETE by id
- * - Respond 204 No Content
- */
 app.delete('/api/persons/:id', (req, res) => {
   persons = persons.filter(p => p.id !== req.params.id);
   res.status(204).end();
 });
 
-/**
- * 3.5 + 3.6: POST new person
- * - Require name & number (400 if missing)
- * - Require unique name (409 conflict if duplicate)
- * - Create random id and return 201 with new resource
- */
 app.post('/api/persons', (req, res) => {
   const { name, number } = req.body;
-
-  // 3.6: validations
-  if (!name || !number) {
-    return res.status(400).json({ error: 'name and number are required' });
-  }
-  const exists = persons.some(p => p.name.toLowerCase() === name.toLowerCase());
-  if (exists) {
+  if (!name || !number) return res.status(400).json({ error: 'name and number are required' });
+  if (persons.some(p => p.name.toLowerCase() === name.toLowerCase()))
     return res.status(409).json({ error: 'name must be unique' });
-  }
-
-  // 3.5: generate id (simple)
   const id = String(Math.floor(Math.random() * 1e9));
-
-  const newPerson = { id, name, number };
-  persons = persons.concat(newPerson);
-  res.status(201).json(newPerson);
+  persons = persons.concat({ id, name, number });
+  res.status(201).json({ id, name, number });
 });
 
-// Start server
+// Serve React build (already included above)
+app.use(express.static('dist'));
+
+// Catch-all: anything not starting with /api should serve index.html
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next(); // let API routes handle it or return 404
+  }
+  res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+});
+
+
+// Start server (Render uses PORT env) 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

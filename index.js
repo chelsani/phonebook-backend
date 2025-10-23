@@ -28,7 +28,7 @@ app.get('/info', (req, res) => {
   const count = persons.length;
   const time = new Date();
   res.send(`
-    <p>Phonebook has info for ${count} people</p>
+    <p>Phonebook has information for ${count} people</p>
     <p>${time}</p>
   `);
 });
